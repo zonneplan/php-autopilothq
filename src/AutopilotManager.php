@@ -2,8 +2,14 @@
 
 namespace Autopilot;
 
+use Autopilot\Exceptions\CannotOverwriteContactIdException;
+use Autopilot\Exceptions\ExceededContactUploadLimitException;
+use Autopilot\Exceptions\FailedContactsBulkSaveException;
+use Autopilot\Exceptions\InvalidInstanceTypeException;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\ClientException;
+use Autopilot\Exceptions\AutopilotException;
+use Autopilot\Exceptions\MethodNotImplementedException;
 
 class AutopilotManager
 {
@@ -28,20 +34,12 @@ class AutopilotManager
      */
     protected static $MAX_UPLOADS = 100;
 
-    /**
-     * AutopilotManager constructor.
-     *
-     * @param string $apiKey
-     *   Autopilot secret key.
-     * @param string $apiHost
-     *   Autopilot host URI.
-     */
-    public function __construct($apiKey, $apiHost = null, Client $client = null)
+    public function __construct(string $apiKey, ?string $apiHost = null, Client $client = null)
     {
         $this->apiKey = $apiKey;
 
         // instantiate client
-        $this->client = (null !== $client)? $client: new Client([
+        $this->client = (null !== $client) ? $client : new Client([
             'base_uri' => $apiHost ?: 'https://api2.autopilothq.com/v1/',
         ]);
     }
@@ -54,28 +52,27 @@ class AutopilotManager
      * @param $id
      *
      * @return AutopilotContact
+     * @throws AutopilotException
      */
     public function getContact($id)
     {
         $response = $this->apiGet('contact/' . $id);
 
-        $contact = new AutopilotContact($response);
-
-        return $contact;
+        return new AutopilotContact($response);
     }
 
     /**
      * @param AutopilotContact $contact
      *
      * @return AutopilotContact
-     * @throws AutopilotException
+     * @throws CannotOverwriteContactIdException|AutopilotException
      */
     public function saveContact(AutopilotContact $contact)
     {
         $response = $this->apiPost('contact', $contact->toRequest());
 
         if ($contact->getFieldValue('contact_id') !== null && $contact->getFieldValue('contact_id') !== $response['contact_id']) {
-            throw AutopilotException::cannotOverwriteContactId();
+            throw CannotOverwriteContactIdException::create($response['contact_id'], $contact->getFieldValue('contact_id'));
         }
 
         $this->contactPostUpdate($contact, $response['contact_id']);
@@ -85,24 +82,24 @@ class AutopilotManager
 
     /**
      * @param array $contacts
-     * @param bool  $autosplit
+     * @param bool $autosplit
      *
      * @return array
-     * @throws AutopilotException
+     * @throws InvalidInstanceTypeException|FailedContactsBulkSaveException|ExceededContactUploadLimitException
      */
     public function saveContacts(array $contacts, $autosplit = false)
     {
-        if (! $autosplit && sizeof($contacts) > self::$MAX_UPLOADS) {
-            throw AutopilotException::exceededContactsUploadLimit();
+        if (!$autosplit && sizeof($contacts) > self::$MAX_UPLOADS) {
+            throw ExceededContactUploadLimitException::create(sizeof($contacts));
         }
 
         // list of contact ids corresponding to emails
         $contactIds = [];
 
         $request = [];
-        foreach($contacts as $contact) {
-            if (! $contact instanceof AutopilotContact) {
-                throw AutopilotException::invalidContactType();
+        foreach ($contacts as $contact) {
+            if (!$contact instanceof AutopilotContact) {
+                throw InvalidInstanceTypeException::create(AutopilotContact::class);
             }
 
             $request[] = $contact->toRequest($prependKey = false);
@@ -121,10 +118,16 @@ class AutopilotManager
 
         // update all ids
         /** @var AutopilotContact $contact */
-        foreach($contacts as $contact) {
+        foreach ($contacts as $contact) {
 
-            if (! isset($contactIds[$contact->getFieldValue('Email')])) {
-                throw AutopilotException::contactsBulkSaveFailed('contact "' . $contact->getFieldValue('Email') . '" failed to upload');
+            if (!isset($contactIds[$contact->getFieldValue('Email')])) {
+                if ($contact->getFieldValue('Email') !== null) {
+                    $type = 'Email';
+                } else {
+                    $type = 'LeadCode';
+                }
+
+                throw FailedContactsBulkSaveException::create($type, $contact->getFieldValue($type));
             }
 
             $this->contactPostUpdate($contact, $contactIds[$contact->getFieldValue('Email')]);
@@ -137,6 +140,7 @@ class AutopilotManager
      * @param $id
      *
      * @return boolean
+     * @throws AutopilotException
      */
     public function deleteContact($id)
     {
@@ -149,6 +153,7 @@ class AutopilotManager
      * @param $id
      *
      * @return boolean
+     * @throws AutopilotException
      */
     public function unsubscribeContact($id)
     {
@@ -161,6 +166,7 @@ class AutopilotManager
      * @param $id
      *
      * @return boolean
+     * @throws AutopilotException
      */
     public function subscribeContact($id)
     {
@@ -176,6 +182,7 @@ class AutopilotManager
      * @param $new
      *
      * @return boolean
+     * @throws AutopilotException
      */
     public function updateContactEmail($old, $new)
     {
@@ -201,7 +208,7 @@ class AutopilotManager
         $response = $this->apiGet('lists');
 
         $lists = [];
-        foreach($response['lists'] as $item) {
+        foreach ($response['lists'] as $item) {
             $lists[$item['list_id']] = $item['title'];
         }
 
@@ -232,12 +239,13 @@ class AutopilotManager
      * @param $name
      *
      * @return null|string
+     * @throws AutopilotException
      */
     public function getListByName($name)
     {
         $lists = $this->getAllLists();
 
-        foreach($lists as $listId => $listName) {
+        foreach ($lists as $listId => $listName) {
             if ($listName === $name) {
                 return $listId;
             }
@@ -253,11 +261,11 @@ class AutopilotManager
      * @param $listId
      *
      * @return array
-     * @throws AutopilotException
+     * @throws MethodNotImplementedException|AutopilotException
      */
     public function deleteList($listId)
     {
-        throw new AutopilotException('delete is not implemented yet');
+        throw MethodNotImplementedException::create('deleteList');
 
         $response = $this->apiPost('list/' . $listId, []);
 
@@ -276,7 +284,7 @@ class AutopilotManager
     public function getAllContactsInList($listId, $bookmark = null)
     {
         $path = 'list/' . $listId . '/contacts';
-        if (! is_null($bookmark)) {
+        if (!is_null($bookmark)) {
             $path .= '/' . $bookmark;
         }
 
@@ -305,7 +313,7 @@ class AutopilotManager
             $list['bookmark'] = $response['bookmark'];
         }
 
-        foreach($response['contacts'] as $data) {
+        foreach ($response['contacts'] as $data) {
             $contact = new AutopilotContact($data);
             $list['contacts'][] = $contact;
         }
@@ -437,7 +445,7 @@ class AutopilotManager
 
     /**
      * Add REST hook
-     * 
+     *
      * @param string $event
      * @param string $targetUrl
      *
@@ -460,10 +468,10 @@ class AutopilotManager
      * @param string $hookId
      *
      * @return bool
-     * 
+     *
      * @throws AutopilotException
      */
-    public function deleteRestHook($hookId) 
+    public function deleteRestHook($hookId)
     {
         $this->apiDelete('hook/' . $hookId);
 
@@ -494,7 +502,7 @@ class AutopilotManager
 
             $response = $this->client->post($path, $options);
 
-        } catch(ClientException $e) {
+        } catch (ClientException $e) {
             throw AutopilotException::fromExisting($e);
         }
 
@@ -519,7 +527,7 @@ class AutopilotManager
                 'headers' => $this->getApiHeaders(),
             ]);
 
-        } catch(ClientException $e) {
+        } catch (ClientException $e) {
             throw AutopilotException::fromExisting($e);
         }
 
@@ -544,7 +552,7 @@ class AutopilotManager
                 'headers' => $this->getApiHeaders(),
             ]);
 
-        } catch(ClientException $e) {
+        } catch (ClientException $e) {
             throw AutopilotException::fromExisting($e);
         }
 
@@ -562,7 +570,7 @@ class AutopilotManager
     {
         return [
             'autopilotapikey' => $this->apiKey,
-            'Content-Type' => 'application/json',
+            'Content-Type'    => 'application/json',
         ];
     }
 

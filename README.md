@@ -5,7 +5,7 @@ A php library for interacting with AutopilotHQ API http://docs.autopilot.apiary.
 ## Installation
 
 ```sh
-$ composer require picr/php-autopilothq
+$ composer require zonneplan/php-autopilothq
 ```
 
 ## Usage

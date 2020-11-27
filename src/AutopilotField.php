@@ -3,6 +3,8 @@
 namespace Autopilot;
 
 use Exception;
+use Autopilot\Exceptions\InvalidTypeException;
+use Autopilot\Exceptions\TypeMisMatchException;
 
 class AutopilotField
 {
@@ -150,9 +152,9 @@ class AutopilotField
     protected function setTypeByValue($type, $value, $cast = null)
     {
         // determine type before setting initial value
-        if (! is_null($cast) && $cast !== 'readonly') {
+        if (!is_null($cast) && $cast !== 'readonly') {
             $this->type = $cast;
-        } elseif(is_null($type)){
+        } elseif (is_null($type)) {
             $this->type = $this->getTypeByValue($value);
         } else {
             $this->type = $type;
@@ -215,22 +217,23 @@ class AutopilotField
      * @param $value
      *
      * @return null
-     * @throws AutopilotException
+     * @throws InvalidTypeException|TypeMisMatchException
      */
     public function setValue($value)
     {
-        if ($this->isReadOnly() && ! is_null($this->value)) {
+        if ($this->isReadOnly() && !is_null($this->value)) {
             return null;
         }
 
         $type = $this->getTypeByValue($value);
-        if (! in_array($type, self::$allowedTypes)) {
-            throw AutopilotException::invalidAutopilotType($type);
+
+        if (!in_array($type, self::$allowedTypes)) {
+            throw InvalidTypeException::create($type);
         }
 
         // type of field is set in the constructor
         if (($this->getType() !== $type) && !is_null($value)) {
-            throw AutopilotException::typeMismatch($this->getType(), $type);
+            throw TypeMisMatchException::create($this->getName(), $this->getType(), $type);
         }
 
         return $this->value = $value;
@@ -286,7 +289,7 @@ class AutopilotField
             return 'Mailing' . $field;
         }
 
-        return implode(' ', array_map(function($value) {
+        return implode(' ', array_map(function ($value) {
             return self::toStudlyCase($value);
         }, explode(' ', $name)));
     }
@@ -297,7 +300,7 @@ class AutopilotField
      * @param $value
      *
      * @return string
-     * @throws Exception
+     * @throws InvalidTypeException
      */
     protected function getTypeByValue($value)
     {
@@ -308,7 +311,7 @@ class AutopilotField
 
         // regex below throws up when value is an object or array
         if ($type === 'object' || $type === 'array') {
-            throw new Exception('type "' . $type . '" is not a valid autopilot data type');
+            throw InvalidTypeException::create($type);
         }
 
         // datetime string
@@ -326,8 +329,8 @@ class AutopilotField
 
     protected function checkType($type)
     {
-        if (! in_array($type, self::$allowedTypes)) {
-            throw new Exception('type "' . $type . '" is not a valid autopilot data type');
+        if (!in_array($type, self::$allowedTypes)) {
+            throw InvalidTypeException::create($type);
         }
 
         return true;
