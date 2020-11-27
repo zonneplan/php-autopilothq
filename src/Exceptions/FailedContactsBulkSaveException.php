@@ -6,8 +6,11 @@ use Exception;
 
 class FailedContactsBulkSaveException extends Exception
 {
-    public static function create(?string $message = null): self
+    public static function create(?string $email = null): self
     {
-        return new static('contacts bulk upload failed' . (is_null($message) ? '' : ': ' . $message));
+        return new static(sprintf(
+            'Failed to upload contacts in bulk. Failed contact: "%s"',
+            $email
+        ));
     }
 }

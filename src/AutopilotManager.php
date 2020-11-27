@@ -121,7 +121,7 @@ class AutopilotManager
         foreach ($contacts as $contact) {
 
             if (!isset($contactIds[$contact->getFieldValue('Email')])) {
-                throw FailedContactsBulkSaveException::create('contact "' . $contact->getFieldValue('Email') . '" failed to upload');
+                throw FailedContactsBulkSaveException::create($contact->getFieldValue('Email'));
             }
 
             $this->contactPostUpdate($contact, $contactIds[$contact->getFieldValue('Email')]);
