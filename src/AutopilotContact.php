@@ -95,7 +95,6 @@ class AutopilotContact implements JsonSerializable
      * @param $value
      *
      * @return string|null
-     * @throws AutopilotException
      */
     public function setFieldValue($name, $value)
     {

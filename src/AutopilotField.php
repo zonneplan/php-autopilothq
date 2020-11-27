@@ -226,6 +226,7 @@ class AutopilotField
         }
 
         $type = $this->getTypeByValue($value);
+
         if (!in_array($type, self::$allowedTypes)) {
             throw InvalidTypeException::create($type);
         }
@@ -299,7 +300,7 @@ class AutopilotField
      * @param $value
      *
      * @return string
-     * @throws Exception
+     * @throws InvalidTypeException
      */
     protected function getTypeByValue($value)
     {
@@ -310,7 +311,7 @@ class AutopilotField
 
         // regex below throws up when value is an object or array
         if ($type === 'object' || $type === 'array') {
-            throw new Exception('type "' . $type . '" is not a valid autopilot data type');
+            throw InvalidTypeException::create($type);
         }
 
         // datetime string
@@ -329,7 +330,7 @@ class AutopilotField
     protected function checkType($type)
     {
         if (!in_array($type, self::$allowedTypes)) {
-            throw new Exception('type "' . $type . '" is not a valid autopilot data type');
+            throw InvalidTypeException::create($type);
         }
 
         return true;

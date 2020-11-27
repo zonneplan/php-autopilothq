@@ -85,7 +85,7 @@ class AutopilotManager
      * @param bool $autosplit
      *
      * @return array
-     * @throws InvalidInstanceTypeException|FailedContactsBulkSaveException|ExceededContactUploadLimitException|AutopilotException
+     * @throws InvalidInstanceTypeException|FailedContactsBulkSaveException|ExceededContactUploadLimitException
      */
     public function saveContacts(array $contacts, $autosplit = false)
     {
