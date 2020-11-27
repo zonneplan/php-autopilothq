@@ -72,7 +72,7 @@ class AutopilotManager
         $response = $this->apiPost('contact', $contact->toRequest());
 
         if ($contact->getFieldValue('contact_id') !== null && $contact->getFieldValue('contact_id') !== $response['contact_id']) {
-            throw CannotOverwriteContactIdException::create();
+            throw CannotOverwriteContactIdException::create($response['contact_id'], $contact->getFieldValue('contact_id'));
         }
 
         $this->contactPostUpdate($contact, $response['contact_id']);
@@ -90,7 +90,7 @@ class AutopilotManager
     public function saveContacts(array $contacts, $autosplit = false)
     {
         if (!$autosplit && sizeof($contacts) > self::$MAX_UPLOADS) {
-            throw ExceededContactUploadLimitException::create();
+            throw ExceededContactUploadLimitException::create(sizeof($contacts));
         }
 
         // list of contact ids corresponding to emails

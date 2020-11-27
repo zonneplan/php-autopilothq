@@ -6,8 +6,12 @@ use Exception;
 
 class CannotOverwriteContactIdException extends Exception
 {
-    public static function create(): self
+    public static function create($originalContactId, $newContactId): self
     {
-        return new static('Saved contact id is different from current contact id');
+        return new static(sprintf(
+            'Original contact id (%s) is different from contact id (%s) to save',
+            $originalContactId,
+            $newContactId
+        ));
     }
 }

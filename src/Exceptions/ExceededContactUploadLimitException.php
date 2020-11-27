@@ -6,8 +6,11 @@ use Exception;
 
 class ExceededContactUploadLimitException extends Exception
 {
-    public static function create(): self
+    public static function create(int $itemsFound): self
     {
-        return new static('Maximum contact upload is 100');
+        return new static(sprintf(
+            'Maximum contact upload is 100, found %d items',
+            $itemsFound
+        ));
     }
 }
