@@ -121,7 +121,13 @@ class AutopilotManager
         foreach ($contacts as $contact) {
 
             if (!isset($contactIds[$contact->getFieldValue('Email')])) {
-                throw FailedContactsBulkSaveException::create($contact->getFieldValue('Email'));
+                if ($contact->getFieldValue('Email') !== null) {
+                    $type = 'Email';
+                } else {
+                    $type = 'LeadCode';
+                }
+
+                throw FailedContactsBulkSaveException::create($type, $contact->getFieldValue($type));
             }
 
             $this->contactPostUpdate($contact, $contactIds[$contact->getFieldValue('Email')]);

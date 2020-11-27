@@ -3,7 +3,6 @@
 namespace Autopilot;
 
 use JsonSerializable;
-use Autopilot\Exceptions\AutopilotException;
 
 class AutopilotContact implements JsonSerializable
 {
