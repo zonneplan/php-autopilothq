@@ -225,7 +225,7 @@ class AutopilotField
             return null;
         }
 
-        if ($this->getType() === 'Date' && trim($this->value) === '') {
+        if ($this->getType() === 'date' && trim($this->value) === '') {
             return null;
         }
 
