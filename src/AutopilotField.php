@@ -155,7 +155,7 @@ class AutopilotField
         if (!is_null($cast) && $cast !== 'readonly') {
             $this->type = $cast;
         } elseif (is_null($type)) {
-            $this->type = $this->getTypeByValue($value);
+            $this->type = $this->getTypeByValue($value, null);
         } else {
             $this->type = $type;
         }
@@ -225,7 +225,7 @@ class AutopilotField
             return null;
         }
 
-        $type = $this->getTypeByValue($value);
+        $type = $this->getTypeByValue($value, $this->getType());
 
         if (!in_array($type, self::$allowedTypes)) {
             throw InvalidTypeException::create($type);
@@ -298,14 +298,20 @@ class AutopilotField
      * Extract type from value
      *
      * @param $value
+     * @param $expectedType
      *
      * @return string
      * @throws InvalidTypeException
      */
-    protected function getTypeByValue($value)
+    protected function getTypeByValue($value, $expectedType = null): string
     {
         $type = gettype($value);
         if ($type === 'double') {
+            return 'float';
+        }
+
+        // a float can also be a 'whole' number, without decimals, wich will be seen as a integer
+        if ($type === 'integer' && $expectedType === 'float') {
             return 'float';
         }
 
